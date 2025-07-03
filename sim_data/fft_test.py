@@ -49,7 +49,7 @@ plt.xlabel("Time (s)")
 plt.ylabel("Amplitude")
 plt.grid(True)
 
-# Reconstructed signal after IFFT
+# Reconstructed Signal from X_shift，does not work. 这在数学上也不等价。
 plt.subplot(4, 1, 4)
 plt.plot(t, x_recon_shift.real, label='Reconstructed x(t)', linestyle='--')
 plt.title("Reconstructed Signal from X_shift")

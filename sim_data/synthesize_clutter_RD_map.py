@@ -42,9 +42,9 @@ def simulate_clutter_echo_IQ(M, fs, B, T_p, T_pri, clutter_rmax, K=100):
     C = np.zeros((M, N_PRI), dtype=complex)
 
     # 模拟 K 个散射点
-    for k in range(K):
+    for _ in range(K):
         A_k = np.sqrt(np.random.exponential())      # 振幅 √指数分布（Rayleigh envelope）
-        phi_k = np.random.uniform(0, 2 * np.pi)     # 初始相位
+        phi_k = np.random.uniform(0, 2 * np.pi)     # 初始相位 （这个感觉有问题）
         f_D_k = np.random.normal(0, 1 / (10 * T_pri)) # 多普勒频率，近似0Hz左右
         tau_k = np.random.uniform(0, tau_max)           # 延迟，0~T_p 之间
 
@@ -66,17 +66,16 @@ def simulate_clutter_echo_IQ(M, fs, B, T_p, T_pri, clutter_rmax, K=100):
     return C, tx_chirp, N_p, N_PRI
 
 def compute_RD_map(C, tx_chirp, N_PRI):
-    # 获取匹配滤波器（共轭+时间翻转）
+    # 获取匹配滤波器
     
     H = np.conj(np.fft.fft(tx_chirp, n=N_PRI))
-
-    # 距离压缩（频域匹配滤波）
+    # 距离压缩（频域匹配滤波），注意，这里严格来讲是循环卷积，不是线性卷积，但是最后结果是差别不大的。
     R = np.fft.ifft(np.fft.fft(C, axis=1) * H[None, :], axis=1)
 
     # 多普勒处理（慢时间 FFT）
     RD = np.fft.fftshift(np.fft.fft(R, axis=0), axes=0)
 
-    return RD
+    return RD, R
 
 
 
@@ -87,8 +86,35 @@ T_p = 20e-6       # 20 us
 T_pri = 100e-6    # 100 us (10kHz PRF)
 M = 128           # 128 pulses per CPI
 K = 500           # 500 clutter scatterers
-clutter_rmax = 3000  # 3 km clutter范围
+clutter_rmax = 2000  # 3 km clutter范围
 
-C, N_p, N_PRI = simulate_clutter_echo_IQ(M, fs, B, T_p, T_pri, clutter_rmax, K)
+C, tx_chirp, N_p, N_PRI = simulate_clutter_echo_IQ(M, fs, B, T_p, T_pri, clutter_rmax, K)
 
+RD, R = compute_RD_map(C, tx_chirp, N_PRI)
 
+###############画图##############
+
+fig, axs = plt.subplots(2, 1, figsize=(12, 8))
+
+# 计算真实距离坐标
+range_axis = np.arange(N_PRI) * c / (2 * fs)
+
+# ===== R 图 =====
+im1 = axs[0].imshow(np.abs(R), aspect='auto', cmap='jet',
+                    extent=[range_axis[0], range_axis[-1], 0, M])
+axs[0].set_title("Range Compressed Data (R)")
+axs[0].set_ylabel("Pulse Index")
+axs[0].set_xlabel("Range (meters)")
+fig.colorbar(im1, ax=axs[0], orientation='vertical', label='Amplitude')
+
+# ===== RD 图 =====
+im2 = axs[1].imshow(20 * np.log10(np.abs(RD) + 1e-6), aspect='auto',
+                    cmap='jet',
+                    extent=[range_axis[0], range_axis[-1], -M//2, M//2])
+axs[1].set_title("Range-Doppler Map (RD)")
+axs[1].set_ylabel("Doppler Bin")
+axs[1].set_xlabel("Range (meters)")
+fig.colorbar(im2, ax=axs[1], orientation='vertical', label='Magnitude (dB)')
+
+plt.tight_layout()
+plt.show()
