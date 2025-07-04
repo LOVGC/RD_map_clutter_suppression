@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from scipy.signal import hann, correlate
+from scipy.signal import correlate
+from scipy.signal.windows import hann
 import scipy
 from numpy.fft import fft, ifft, fftfreq, fftshift
 import matplotlib.pyplot as plt
@@ -86,6 +87,7 @@ class PDRadarSimulator:
 
         return echo_matrix
 
+    # todo: 需要加 window 吗？
     def matched_filtering_corr(self, echo_matrix):
         """
         对每个脉冲（行）进行 fast-time 匹配滤波
@@ -134,6 +136,7 @@ class PDRadarSimulator:
         rd_map = np.abs(rd_map)
         return rd_map
 
+    # toDo: 这个 vmax 是干嘛的？
     def plot_rd_map(self, rd_map, vmax=None, title="RD Map"):
         """
         绘制 RD 图，Doppler 轴用速度（m/s）表示
