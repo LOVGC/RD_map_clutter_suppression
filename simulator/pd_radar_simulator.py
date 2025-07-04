@@ -8,18 +8,21 @@ import matplotlib.pyplot as plt
 
 def generate_tx_chirp(fs, B, T_p, T_pri):
     """
-    生成一个 PRI 长度的 chirp 信号（baseband），前 T_p 为 chirp，后面补零。
-    返回值:
-        s_full: 长度为 T_pri 的完整 chirp 信号（含零）
+    生成一个中心频率为 0 的 baseband chirp（对称的 LFM 波形），
+    在前 T_p 时长内为 chirp，后面为零填充，长度为一个 PRI。
+
+    返回：
+        s_full: 长度为 T_pri 的 chirp 信号（含零）
         tx_chirp: 原始 chirp 模板（长度为 T_p）
         N_p: chirp 点数
         N_PRI: PRI 点数
     """
-    N_p = int(round(T_p * fs))      # Chirp 长度（点数）
-    N_pri = int(round(T_pri * fs))  # PRI 总长度（点数）
+    N_p = int(round(T_p * fs))      # Chirp 点数
+    N_pri = int(round(T_pri * fs))  # PRI 点数
 
-    t = np.arange(N_p) / fs
-    mu = B / T_p  # 调频率
+    # 时间轴以 0 为中心，对称 chirp
+    t = np.arange(N_p) / fs - T_p / 2
+    mu = B / T_p  # 调频率（Hz/s）
 
     tx_chirp = np.exp(1j * np.pi * mu * t**2)
     s_full = np.zeros(N_pri, dtype=complex)
