@@ -91,20 +91,20 @@ class PDRadarSimulator:
 
         return echo_matrix
 
-    # todo: 需要加 window 吗？
     def matched_filtering_corr(self, echo_matrix):
         """
-        对每个脉冲（行）进行 fast-time 匹配滤波
+        一直弄不对这个
         """
         M, N = echo_matrix.shape
         mf_output = np.zeros_like(echo_matrix, dtype=complex)
-
-        mf_kernel = np.conj(self.tx_template[::-1])  # 匹配滤波器
-
+        
+        # 关键修复：使用反转后的模板共轭
+        mf_kernel = np.conj(self.tx_template)
+        
         for m in range(M):
-            conv_result = correlate(echo_matrix[m, :], mf_kernel, mode='same')
-            mf_output[m, :] = conv_result
-
+            corr_result = correlate(echo_matrix[m, :], mf_kernel, mode='same')
+            mf_output[m, :] = corr_result
+            
         return mf_output
     
     def matched_filtering_fft(self, echo_matrix):

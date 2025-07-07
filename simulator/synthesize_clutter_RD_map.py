@@ -5,19 +5,21 @@ import matplotlib.pyplot as plt
 
 c = scipy.constants.c  # 光速，单位 m/s
 
-def generate_tx_chirp(fs, B, T_p, T_pri):
+def generate_tx_chirp(fs, B, T_chirp, T_pri):
     """
     生成一个 PRI 长度的chirp信号，其中前 T_p 部分为chirp，后面补零
     fs: baseband sampling frequency, Hz
     B: chirp bandwidth, Hz
-    T_p: chirp pulse duration, seconds
+    T_chirp: chirp pulse duration, seconds
     T_pri: pulse repetition interval, seconds
     """
-    N_p = int(round(T_p * fs))      # 脉冲内采样点数
+    N_p = int(round(T_chirp * fs))      # 脉冲内采样点数
     N_PRI = int(round(T_pri * fs))    # PRI内总采样点数
 
     t = np.arange(N_p) / fs
-    mu = B / T_p
+    t = t - T_chirp / 2  # centered frequency 
+
+    mu = B / T_chirp
     tx_chirp = np.exp(1j * np.pi * mu * t**2)
 
     s_full = np.zeros(N_PRI, dtype=complex)
