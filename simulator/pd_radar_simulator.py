@@ -55,6 +55,7 @@ class PDRadarSimulator:
     def add_scatterer(self, r, v, rcs, phi):
         """
         添加一个散射中心（距离[m], 速度[m/s], RCS/幅度）
+        phi: 初始多普勒相位（rad）
         """
         self.scatterers.append({'r': r, 'v': v, 'rcs': rcs, 'doppler_init_phase':phi})
 
