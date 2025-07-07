@@ -94,3 +94,21 @@ plt.colorbar(label="Amplitude")
 plt.tight_layout()
 plt.show()
 
+
+# doppler process
+rd_map = pd_radar_simulator.doppler_process(mf_output, window=True)
+
+# 绘图
+plt.figure(figsize=(10, 6))
+epsilon = 1e-12
+amp_dB = 20 * np.log10(np.abs(rd_map) + epsilon)
+
+plt.imshow(amp_dB, aspect='auto', cmap='jet', origin='lower',
+           extent=[rng_axis[0], rng_axis[-1], 0, M-1])  # extent 显式标注坐标轴范围
+
+plt.xlabel("Range (m)")
+plt.ylabel("Pulse Index")
+plt.title("RD Map")
+plt.colorbar(label="Amplitude")
+plt.tight_layout()
+plt.show()

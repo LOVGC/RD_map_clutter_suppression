@@ -127,7 +127,7 @@ class PDRadarSimulator:
             total_echo_matrix += self._generate_scatterer_echo_matrix(scatterer)
         return total_echo_matrix
     
-    def generate_rd_map(self, mf_output, window=True):
+    def doppler_process(self, mf_output, window=True):
         """
         对匹配滤波后的信号做 slow-time FFT，得到 RD 图
         mf_output: 匹配滤波后的 echo_matrix，形状 M x N
