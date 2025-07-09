@@ -42,12 +42,16 @@ class PDRadarSimulator:
         tx_full: 完整的发射 chirp 信号（PRI 长度）
         tx_template: 单个脉冲的 chirp 模板（长度为 T_p）, T_p 是脉冲持续时间
         """
-        self.fc = fc
+        
         self.T_pri = T_pri
         self.fs = fs
         self.N = int(round(T_pri * fs))  # 每个 T_pri 内的采样点数
         self.M = M_slow # 脉冲个数
         self.c = scipy.constants.c 
+
+        self.fc = fc
+        self.lambda_ = self.c / fc  # wavelength (m)
+
         self.scatterers = []
         self.tx_full = tx_full
         self.tx_template = tx_template
@@ -91,21 +95,21 @@ class PDRadarSimulator:
 
         return echo_matrix
 
-    def matched_filtering_corr(self, echo_matrix):
-        """
-        一直弄不对这个
-        """
-        M, N = echo_matrix.shape
-        mf_output = np.zeros_like(echo_matrix, dtype=complex)
+    # def matched_filtering_corr(self, echo_matrix):
+    #     """
+    #     一直弄不对这个
+    #     """
+    #     M, N = echo_matrix.shape
+    #     mf_output = np.zeros_like(echo_matrix, dtype=complex)
         
-        # 关键修复：使用反转后的模板共轭
-        mf_kernel = np.conj(self.tx_template)
+    #     # 关键修复：使用反转后的模板共轭
+    #     mf_kernel = np.conj(self.tx_template)
         
-        for m in range(M):
-            corr_result = correlate(echo_matrix[m, :], mf_kernel, mode='same')
-            mf_output[m, :] = corr_result
+    #     for m in range(M):
+    #         corr_result = correlate(echo_matrix[m, :], mf_kernel, mode='same')
+    #         mf_output[m, :] = corr_result
             
-        return mf_output
+    #     return mf_output
     
     def matched_filtering_fft(self, echo_matrix):
         """
@@ -167,4 +171,32 @@ class PDRadarSimulator:
         plt.tight_layout()
         plt.show()
 
+    
+    def generate_clutter_rd_map(self, K=100, r_min=0, r_max=30e3, v_min=0, v_max=10, rcs_min=0.1, rcs_max=5):
+        """
+        生成 K 个散射点的 RD 图
+        K: 散射点个数
+        r_min, r_max: 距离范围
+        v_min, v_max: 速度范围
+        rcs_min, rcs_max: 雷达散射截面 (RCS) 范围
+        """
+        # 生成 K 个 scatterer 的参数
+        r_values = np.random.uniform(r_min, r_max, K)  # 距离
+        v_values = np.random.normal((v_min + v_max) / 2, (v_max - v_min) / 2, K)  # 速度
+        rcs_values = np.sqrt(np.random.exponential(1, K)) * (rcs_max - rcs_min) + rcs_min  # RCS
+        phi_values = np.random.uniform(0, 2 * np.pi, K)  # 初始相位
 
+        # 将每个散射点添加到模拟器中
+        for i in range(K):
+            self.add_scatterer(r_values[i], v_values[i], rcs_values[i], phi_values[i])
+
+        # 生成总的 echo_matrix（叠加所有散射点的回波）
+        echo_matrix = self.generate_echo_matrix()
+
+        # 进行匹配滤波
+        mf_output = self.matched_filtering_fft(echo_matrix)
+
+        # 进行 Doppler 处理，得到 RD 图
+        rd_map = self.doppler_process(mf_output)
+
+        return rd_map
