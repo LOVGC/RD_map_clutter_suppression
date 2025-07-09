@@ -172,31 +172,55 @@ class PDRadarSimulator:
         plt.show()
 
     
-    def generate_clutter_rd_map(self, K=100, r_min=0, r_max=30e3, v_min=0, v_max=10, rcs_min=0.1, rcs_max=5):
+    def generate_clutter_rd_map(self, r_min, r_max, v_min, v_max, rcs_min, rcs_max, K=100):
         """
-        生成 K 个散射点的 RD 图
-        K: 散射点个数
-        r_min, r_max: 距离范围
-        v_min, v_max: 速度范围
-        rcs_min, rcs_max: 雷达散射截面 (RCS) 范围
+        生成 K 个杂波散射点的 RD 图
+        参数:
+            r_min, r_max: 杂波距离范围 (m)
+            v_min, v_max: 杂波速度范围 (m/s)
+            rcs_min, rcs_max: 杂波RCS幅度范围
+            K: 杂波点数量
+        返回:
+            rd_map: 处理后的RD图 (M x N)
         """
-        # 生成 K 个 scatterer 的参数
-        r_values = np.random.uniform(r_min, r_max, K)  # 距离
-        v_values = np.random.normal((v_min + v_max) / 2, (v_max - v_min) / 2, K)  # 速度
-        rcs_values = np.sqrt(np.random.exponential(1, K)) * (rcs_max - rcs_min) + rcs_min  # RCS
-        phi_values = np.random.uniform(0, 2 * np.pi, K)  # 初始相位
-
-        # 将每个散射点添加到模拟器中
+        # 清空现有散射点
+        self.scatterers = []
+        
+        # 1. 生成K个杂波点的参数
+        # 距离: 均匀分布
+        r_clutter = np.random.uniform(r_min, r_max, K)
+        
+        # 速度: 高斯分布 (均值在中心, 标准差使3σ覆盖[v_min, v_max])
+        v_mean = (v_min + v_max) / 2.0
+        v_std = (v_max - v_min) / 6.0  # 3σ覆盖全范围
+        v_clutter = np.random.normal(v_mean, v_std, K)
+        v_clutter = np.clip(v_clutter, v_min, v_max)  # 确保速度在范围内
+        
+        # RCS幅度: 从指数分布生成并归一化到指定范围
+        rcs_temp = np.sqrt(np.random.exponential(size=K))  # 瑞利分布的幅度
+        # 归一化到[0,1]再缩放到[rcs_min, rcs_max]
+        rcs_norm = (rcs_temp - rcs_temp.min()) / (rcs_temp.max() - rcs_temp.min())
+        rcs_clutter = rcs_min + rcs_norm * (rcs_max - rcs_min)
+        
+        # 初始相位: 均匀分布
+        phi_clutter = np.random.uniform(0, 2 * np.pi, K)
+        
+        # 2. 添加所有杂波散射点
         for i in range(K):
-            self.add_scatterer(r_values[i], v_values[i], rcs_values[i], phi_values[i])
-
-        # 生成总的 echo_matrix（叠加所有散射点的回波）
+            self.add_scatterer(
+                r=r_clutter[i],
+                v=v_clutter[i],
+                rcs=rcs_clutter[i],
+                phi=phi_clutter[i]
+            )
+        
+        # 3. 生成回波矩阵
         echo_matrix = self.generate_echo_matrix()
-
-        # 进行匹配滤波
+        
+        # 4. 匹配滤波
         mf_output = self.matched_filtering_fft(echo_matrix)
-
-        # 进行 Doppler 处理，得到 RD 图
-        rd_map = self.doppler_process(mf_output)
-
+        
+        # 5. 多普勒处理得到RD图
+        rd_map = self.doppler_process(mf_output, window=True)
+        
         return rd_map
