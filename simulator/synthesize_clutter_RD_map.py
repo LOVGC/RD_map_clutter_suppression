@@ -77,7 +77,7 @@ def compute_RD_map(C, tx_chirp, N_PRI):
     # 多普勒处理（慢时间 FFT）
     RD = np.fft.fftshift(np.fft.fft(R, axis=0), axes=0)
 
-    return RD, R
+    return RD, R 
 
 
 
